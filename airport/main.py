@@ -11,6 +11,7 @@ import time
 import datetime
 import helpfunction
 import Draw
+# above imported library
 """ Default airport and traffic files """
 DATA_PATH = "DATA"
 APT_FILE = os.path.join(DATA_PATH, "tianjin_new.txt")
