@@ -20,7 +20,7 @@ def calculate_cost(length, speed, fuel_rate):
     :param fuel_rate: Fuel consumption rate in liters per second.
     :return: Tuple of time cost (in seconds) and fuel cost (in liters).
     """
-    time_cost = length / speed  # Time to travel the segment
+    time_cost = abs(length / speed)  # Time to travel the segment
     fuel_cost = time_cost * fuel_rate  # Total fuel consumed
     return time_cost, fuel_cost
 

@@ -88,7 +88,8 @@ if __name__ == "__main__":
     # print(time_windows)
     # print(costs)
 
-    for flightnum in range(0, len(flights)):
+    # for flightnum in range(0, len(flights)):
+    for flightnum in range(0, 1):
         flight = flights[flightnum]
         # 多飞机规划路径：
         # 初始化开始时间

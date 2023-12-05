@@ -154,47 +154,65 @@ def AMOA_star(start, end, costs, graph, time_windows, start_time):
             COSTS.add(g_n)
             OPEN = [alt for alt in OPEN if not is_dominated(g_n, alt[2])]
         else:
-            n, g_n, SG, G_op, G_cl, OPEN, COSTS, end, costs, graph, time_windows =\
-                expand(n, g_n, f_n, SG, G_op, G_cl, OPEN, COSTS, end, costs, graph, time_windows, start_time)
+            for segment in graph[n]:
+                # print(segment)
+                m = segment[1]  # Assuming segment identifies the end node
+                # C_n_m = read_cost_vector(n, m, costs)
+                C_n_m = costs[(n, m)]
+
+                if len(C_n_m) > 2:  # Normal segment
+                    for c_n_m_l in C_n_m:
+                        n, m, g_n, f_n, SG, G_op, G_cl, OPEN, COSTS, end, costs, graph, time_windows, start_time, C_n_m, c_n_m_l, segment = \
+                            expand(n, m, g_n, f_n, SG, G_op, G_cl, OPEN, COSTS, end, costs, graph, time_windows,
+                                   start_time, C_n_m, c_n_m_l, segment)
+                else:  # Turn segment
+                    c_n_m_l = C_n_m
+                    # print(C_n_m)
+                    # print("hhhhh", c_n_m_l)
+                    n, m, g_n, f_n, SG, G_op, G_cl, OPEN, COSTS, end, costs, graph, time_windows, start_time, C_n_m, c_n_m_l, segment = \
+                        expand(n, m, g_n, f_n, SG, G_op, G_cl, OPEN, COSTS, end, costs, graph, time_windows,
+                               start_time, C_n_m, c_n_m_l, segment)
 
     path = reconstruct_paths(SG, end)
     return path, COSTS
 
 
-def expand(n, g_n, f_n, SG, G_op, G_cl, OPEN, COSTS, end, costs, graph, time_windows, start_time):
-    for segment in graph[n]:
-        # print(segment)
-        m = segment[1]  # Assuming segment identifies the end node
-        # C_n_m = read_cost_vector(n, m, costs)
-        C_n_m = costs[(n, m)]
+def expand(n, m, g_n, f_n, SG, G_op, G_cl, OPEN, COSTS, end, costs, graph, time_windows, start_time, C_n_m, c_n_m_l, segment):
+    # for segment in graph[n]:
+    #     # print(segment)
+    #     m = segment[1]  # Assuming segment identifies the end node
+    #     # C_n_m = read_cost_vector(n, m, costs)
+    #     C_n_m = costs[(n, m)]
+    #
+    #     if len(C_n_m) > 2:
+    # for c_n_m_l in C_n_m:
+    #     # print(C_n_m)
+    #     # print("hhhhh", c_n_m_l)
+    check, holding_enabled, holding_cost = check_time_windows(segment, time_windows, c_n_m_l, G_op, G_cl,
+                                                              start_time)
+    if not check:
+        #  holding_enabled is Boolean type
+        if holding_enabled:
+            c_n_m_l = add_holding_cost(c_n_m_l, holding_cost)
+        else:
+            return n, m, g_n, f_n, SG, G_op, G_cl, OPEN, COSTS, end, costs, graph, time_windows,start_time, C_n_m, c_n_m_l, segment
 
-        for c_n_m_l in C_n_m:
-            print(C_n_m)
-            print("hhhhh", c_n_m_l)
-            check, holding_enabled, holding_cost = check_time_windows(segment, time_windows, c_n_m_l, G_op, G_cl, start_time)
-            if not check:
-                #  holding_enabled is Boolean type
-                if holding_enabled:
-                    c_n_m_l = add_holding_cost(c_n_m_l, holding_cost)
-                else:
-                    continue
-
-            g_m = tuple(sum(x) for x in zip(g_n, c_n_m_l))
-            if m not in SG:
-                f_m = tuple(sum(x) for x in zip(g_m, heuristic_function(m, end)))
-                if not is_dominated(f_m, COSTS):
-                    OPEN.append((m, g_m, f_m))
-                    G_op[m] = {g_m}
-                    SG[m] = n
-            else:
-                if g_m in G_op.get(m, set()) or g_m in G_cl.get(m, set()):
-                    SG[m] = n
-                elif not any(is_dominated(g_m, other) for other in G_op.get(m, set()).union(G_cl.get(m, set()))):
-                    # eliminate_dominated(g_m, G_op.get(m, set()).union(G_cl.get(m, set())))
-                    G_op, G_cl, OPEN = eliminate_dominated(g_m, G_op, G_cl, OPEN)
-                    f_m = tuple(sum(x) for x in zip(g_m, heuristic_function(m, end)))
-                    if not is_dominated(f_m, COSTS):
-                        OPEN.append((m, g_m, f_m))
-                        G_op[m] = {g_m}
-                        SG[m] = n
-    return n, g_n, SG, G_op, G_cl, OPEN, COSTS, end, costs, graph, time_windows
+    g_m = tuple(sum(x) for x in zip(g_n, c_n_m_l))
+    if m not in SG:
+        f_m = tuple(sum(x) for x in zip(g_m, heuristic_function(m, end)))
+        if not is_dominated(f_m, COSTS):
+            OPEN.append((m, g_m, f_m))
+            G_op[m] = {g_m}
+            SG[m] = n
+    else:
+        if g_m in G_op.get(m, set()) or g_m in G_cl.get(m, set()):
+            SG[m] = n
+        elif not any(is_dominated(g_m, other) for other in G_op.get(m, set()).union(G_cl.get(m, set()))):
+            # eliminate_dominated(g_m, G_op.get(m, set()).union(G_cl.get(m, set())))
+            G_op, G_cl, OPEN = eliminate_dominated(g_m, G_op, G_cl, OPEN)
+            f_m = tuple(sum(x) for x in zip(g_m, heuristic_function(m, end)))
+            if not is_dominated(f_m, COSTS):
+                OPEN.append((m, g_m, f_m))
+                G_op[m] = {g_m}
+                SG[m] = n
+    return n, m, g_n, f_n, SG, G_op, G_cl, OPEN, COSTS, end, costs, graph, time_windows, start_time, C_n_m, c_n_m_l, segment
