@@ -20,14 +20,15 @@ STOP_COLOR = "red"
 
 class HMI(tkinter.Tk):
     """ HMI state """
+
     def __init__(self, the_airport, the_traffic):
         super().__init__()
-        self.airport = the_airport      # Airport
-        self.traffic = the_traffic      # Traffic
+        self.airport = the_airport  # Airport
+        self.traffic = the_traffic  # Traffic
         self.time = self.traffic.t_min  # Current time in time steps
-        self.last_xy = (0, 0)           # Last mouse position
-        self.loop = False               # Animation loop ? (False | True)
-        self.delay = 20                 # Animation steps (ms)
+        self.last_xy = (0, 0)  # Last mouse position
+        self.loop = False  # Animation loop ? (False | True)
+        self.delay = 20  # Animation steps (ms)
         # Create widgets
         self.title("ATOS {} {}".format(the_airport.name, the_traffic.name))
         self.canvas = tkinter.Canvas(self, width=1000, height=600,
@@ -49,7 +50,7 @@ class HMI(tkinter.Tk):
         self.canvas.bind('<Button1-Motion>', lambda event: drag(self, event))
         self.canvas.bind('<Double-ButtonPress-1>', lambda _: rescale(self))
         self.canvas.bind('<Button-4>', lambda event: scale(self, 1.1, event))
-        self.canvas.bind('<Button-5>', lambda event: scale(self, 1/1.1, event))
+        self.canvas.bind('<Button-5>', lambda event: scale(self, 1 / 1.1, event))
         self.canvas.bind('<MouseWheel>', lambda event: wheelscale(self, event))
         self.canvas.bind('<KeyPress>', lambda event: key(self, event))
         buttons[0].configure(command=lambda: switch_loop(self, -1))
@@ -60,6 +61,17 @@ class HMI(tkinter.Tk):
         self.canvas.focus_set()
         # Canvas scale reference
         self.canvas.create_line(((0.0, 0.0), (1.0, -1.0)), fill='', tag=SCALE)
+
+
+class Aircraft:
+    def __init__(self, idx, type, speed, pos, alt, heading, route):
+        self.idx = idx
+        self.type = type
+        self.speed = speed
+        self.pos = pos
+        self.alt = alt
+        self.heading = heading
+        self.route = route  # 这是新添加的属性，用于存储飞机的路径
 
 
 def item_tags(tag, i):
@@ -220,7 +232,11 @@ def mouse_motion(hmi, event):
         if tag == POINT:
             point = hmi.airport.points[i]
             world_coords = world_xys(hmi, [hmi.last_xy])[0]
-            info = point.ptype + ' ' + point.name + ' ' + str(world_coords)
+            # info = point.ptype + ' ' + point.name + ' ' + str(world_coords)
+            for p in hmi.airport.points:
+                if p.xy == point.xy:
+                    info = str(i) + ' ' + point.name + ' ' + str(world_coords)
+            # info = point.ptype + ' ' + point.name + ' ' + str(world_coords)
         elif tag == LINE:
             line = hmi.airport.lines[i]
             ttype = "Pushback" if line.speed < 0 else "Taxi"
@@ -238,6 +254,7 @@ def mouse_motion(hmi, event):
             info = flight1.callsign + '<->' + flight2.callsign
     popup(hmi, info, (event.x, event.y + 40))
 
+
 def select(hmi, event):
     """ Select the 'hmi' current element """
     hmi.last_xy = (event.x, event.y)
@@ -247,10 +264,10 @@ def select(hmi, event):
         route_tag = item_tags(ROUTE, i)[0]
         if hmi.canvas.gettags(route_tag) == ():
             draw_route(hmi, i)
-        else: 
+        else:
             hmi.canvas.delete(route_tag)
     elif tag == POINT:
-        print([flight.callsign 
+        print([flight.callsign
                for flight in hmi.traffic.flights
                if flight.stand == i])
     elif tag == '':
@@ -275,7 +292,7 @@ def wheelscale(hmi, event):
     factor = (-100 / event.delta) if event.delta < 0 else (event.delta / 100)
     scale(hmi, factor, event)
 
-    
+
 def forward(hmi, dt):
     """ Forward 'hmi' time by one step of 'dt' """
     t_min = hmi.traffic.t_min

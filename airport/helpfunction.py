@@ -46,34 +46,6 @@ def print_neighbor_info(neighbor_info, points):
                     break
 
 
-def create_neighbor_info_dataframe(neighbor_info, points):
-    data = []
-
-    # 遍历新字典
-    for key_xy, value_xys in neighbor_info.items():
-        key_info = None
-        # 找到与键匹配的点并保存信息
-        for point in points:
-            if point.xy == key_xy:
-                key_info = {"Point Type (Key)": point.ptype, "Point Name (Key)": point.name,
-                            "Coordinates (Key)": point.xy}
-                break
-
-        # 找到与值匹配的点并保存信息
-        for value_xy in value_xys:
-            value_info = None
-            for point in points:
-                if point.xy == value_xy:
-                    value_info = {"Point Type (Value)": point.ptype, "Point Name (Value)": point.name,
-                                  "Coordinates (Value)": point.xy}
-                    break
-
-            if key_info is not None and value_info is not None:
-                data.append({**key_info, **value_info})
-
-    return pd.DataFrame(data)
-
-
 def findpointtype(line1, line2, points):
     point_list_type = []
     point_list = [line1.xys[0], line1.xys[-1], line2.xys[0], line2.xys[-1]]
@@ -84,21 +56,6 @@ def findpointtype(line1, line2, points):
     if S in point_list_type:
         return 1
     return 0
-
-
-def initial_network(network_point, init_lines, init_points, points):
-    # remove the path Stand to normal
-    del_dict = {}
-    for p, connections in network_point.items():
-        for point in points:
-            if point.xy == p and point.ptype == 'Stand':
-                for connected_point in connections.keys():
-                    for point2 in points:
-                        if point2.xy == connected_point and point2.ptype == 'normal':
-                            del_dict[p] = connected_point
-    for p, connections in del_dict.items():
-        network_point[p].pop(connections)
-    return network_point
 
 
 def blocknode(network, path, start_time):
@@ -165,4 +122,35 @@ def find_pushback_points(points, pointcoordlist):
         if p.ptype == 'pushback':
             # print(pointcoordlist.index(p.xy))
             pushback_points.append(pointcoordlist.index(p.xy))
+        else:
+            if p.xy[1] == 6522 and 20557 <= p.xy[0] <= 20750:
+                pushback_points.append((pointcoordlist.index(p.xy)))
+            elif p.xy[1] == 6715:
+                if 20805 <= p.xy[0] <= 21015:
+                    pushback_points.append((pointcoordlist.index(p.xy)))
+                elif 21560 <= p.xy[0] <= 22092:
+                    pushback_points.append((pointcoordlist.index(p.xy)))
+                elif 22565 <= p.xy[0] <= 23018:
+                    pushback_points.append((pointcoordlist.index(p.xy)))
+
+            elif p.xy[1] == 7324:
+                if 21150 <= p.xy[0] <= 21200:
+                    pushback_points.append((pointcoordlist.index(p.xy)))
+                elif p.xy[0] == 21759:
+                    pushback_points.append((pointcoordlist.index(p.xy)))
+
+            elif p.xy[1] == 7321 and p.xy[0] == 22098:
+                pushback_points.append((pointcoordlist.index(p.xy)))
+            elif p.xy[1] == 7689 and 22516 <= p.xy[0] <= 22570:
+                pushback_points.append((pointcoordlist.index(p.xy)))
+            elif p.xy[0] == 22622 and 7891 <= p.xy[1] <= 8111:
+                pushback_points.append((pointcoordlist.index(p.xy)))
+            elif p.xy[1] == 6533 and 21830 <= p.xy[0] <= 22060:
+                pushback_points.append((pointcoordlist.index(p.xy)))
+
+    # print("pushback_points", len(pushback_points))
+    # print(pushback_points)
+    pushback_points.append(1122)
+    pushback_points.append(1121)
+    pushback_points.append(1123)
     return pushback_points

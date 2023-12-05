@@ -11,10 +11,10 @@ import math
 import copy
 import helpfunction
 import matplotlib.pyplot as plt
-import findpath
+import Initial_network
 import time
 import datetime
-import Draw
+import Draw_path
 import geo
 
 
@@ -45,7 +45,7 @@ def find_speed(network, neighbor):
     return speed
 
 
-def routing_environmental_dynamics(network, t, v, flightnum, pathlist, start_time, blockinfo):
+def routing_environmental_dynamics(network, t, v, flighnum, start_time, node_lock_periods):
     """
     The obstacle moves from the lower right corner to the upper left corner
     :param network: {node1: {node2: length, node3: length, ...}, ...}
@@ -56,60 +56,39 @@ def routing_environmental_dynamics(network, t, v, flightnum, pathlist, start_tim
     :param y: the y axis coordinates of nodes
     :return:
     """
-    active_node = [i for i in range(len(network))]
-    inactive_node = []
+
     # 当前第i架飞机所处的时间信息来计算当前别的飞机的位置信息
     # init_time = datetime.datetime(2023, 4, 17, 7, 0)
-    # delt_t = 20 * flightnum
+    active_node = [i for i in range(len(network))]
+    inactive_node = []
+
     t1 = t * v
+    current_time = start_time + t1
 
-    current_time = start_time + datetime.timedelta(seconds=t1)
-    if len(pathlist) != 0:
-        for flight in range(len(pathlist)):
-            # path = pathlist[flight]
-            # the current position of the obstacle
-            block_timedict = blockinfo[flight]
-            for point, block_set in block_timedict.items():
-                time1 = block_set[0]
-                time2 = block_set[1]
-                if time1 <= current_time < time2:
-                    inactive_node.append(point)
-                    if point in active_node:
-                       active_node.remove(point)
+    # Check each node to see if it should be inactive at the current time
+    for node, lock_periods in node_lock_periods.items():
+        for start_time, end_time in lock_periods:
+            # print('endtime',end_time,current_time)
+            if start_time <= current_time < end_time:
+                inactive_node.append(node)
+                if node in active_node:
+                    active_node.remove(node)
+                break  # No need to check other lock periods for this node
 
+    # Copy the network and remove inactive nodes
     new_network = copy.deepcopy(network)
+    for i in inactive_node:
+        new_network[i] = {}
+        for j in new_network:
+            new_network[j].pop(i, None)  # Remove inactive nodes from the adjacency list of other nodes
 
-    for i in range(len(network)):
-        if i in inactive_node:
-            new_network[i] = {}
-        else:
-            need_to_pop = []
-            for j in network[i].keys():
-                if j in inactive_node:
-                    need_to_pop.append(j)
-            for j in need_to_pop:
-                new_network[i].pop(j)
     return new_network, active_node, inactive_node
 
 
-def print_test(list0, pointcoordlist, points):
-    # list0 = [94, 751, 752, 808]
-    finlist = []
-    finname = []
-    for i in range(len(list0)):
-        coord = pointcoordlist[list0[i]]
-        for p in range(len(points)):
-            if points[p].xy == coord:
-                point = points[p].xy
-                pointname = points[p].ptype + points[p].name
-        finlist.append(point)
-        finname.append(pointname)
-    print("finlist", finlist)
-    print("finname", finname)
 
 
-def main(network, in_angles, out_angles, source, destination, flighnum, pathlist, pointcoordlist, theairport,
-         network_point, start_time, blockinfo, points):
+def main(network, in_angles, out_angles, source, destination, flighnum, pointcoordlist, theairport,
+         network_point, start_time, node_lock_periods, points):
     """
     The main function of the RSA4CEPO
     :param network: {node1: {node2: length, node3: length, ...}, ...}
@@ -133,6 +112,7 @@ def main(network, in_angles, out_angles, source, destination, flighnum, pathlist
     length_set = []  # length set
     path_set = []  # path set
     state_set = []
+    activation_times = {}
     # state set, state_set[i] = 1, 2, 3 means ripple i is waiting, active, or dead
     omega = {}  # the set that records the ripple generated at each node
     pushback_points = helpfunction.find_pushback_points(points, pointcoordlist)
@@ -140,15 +120,13 @@ def main(network, in_angles, out_angles, source, destination, flighnum, pathlist
     for node in range(nn):
         omega[node] = -1
 
-    if not os.path.exists('frames'):
-        os.makedirs('frames')
-
     # Step 2. Initialize the first ripple
     epicenter_set.append(source)
     radius_set.append(0)
     length_set.append(0)
     path_set.append([source])
     state_set.append(2)
+    activation_times[source] = int(t*v)
     omega[source] = nr
     nr += 1
     k = 0
@@ -177,10 +155,10 @@ def main(network, in_angles, out_angles, source, destination, flighnum, pathlist
 
         # Step 3.3. Update the obstacle based on the given routing environmental dynamics
         # if flighnum == 0:
-        new_network, active_node, inactive_node = routing_environmental_dynamics(network, t, v, flighnum, pathlist,
-                                                                                 start_time, blockinfo)
-        # if inactive_node :
-        #     print(inactive_node)
+        new_network, active_node, inactive_node = routing_environmental_dynamics(network, t, v, flighnum,
+                                                                                 start_time, node_lock_periods)
+        # if inactive_node:
+            # print(inactive_node)
         # new_neighbor = find_neighbor(new_network)
 
         for i in range(nr):  # waiting nodes -> active nodes
@@ -203,24 +181,26 @@ def main(network, in_angles, out_angles, source, destination, flighnum, pathlist
                 # Step 3.5. New incoming ripples
                 # for node in new_neighbor[epicenter]:
                 for node in neighbor[epicenter]:
+                    # print("neigh", neighbor[epicenter])
                     if omega[node] == -1 or (node in pushback_points):  # the node has not been visited yet
                         temp_length = network[epicenter][node]
                         in_angle = in_angles[epicenter][node]
                         if temp_length <= radius < temp_length + v:
                             # Step 3.6. Accessible node
                             if len(path) > 1:
-                                delta = math.cos(out_angles[path[-2]][epicenter] - in_angle) # if len(path) > 1 else 1
-                                # print('delta', delta, 'epi', epicenter, pointcoordlist[epicenter], 'path[-2]', path[-2],
-                                #       pointcoordlist[path[-2]])
+                                ang_rad = out_angles[path[-2]][epicenter] - in_angle
+                                delta = math.cos(ang_rad)  # if len(path) > 1 else 1
+                                if (ang_rad / 3.141592653589793) == 1.5:
+                                    delta = 0  # 控制有1.5pi 等于0 实际为负数
                             else: delta = 1
                             # print(path)
                             # pathcood = helpfunction.list2node(path, pointcoordlist)
                             # print('path :', helpfunction.print_plist(pathcood, points))
 
-                            if 0 < delta and node in active_node:
+                            if 0 <= delta and node in active_node:
                                 temp_path = path.copy()
                                 temp_path.append(node)
-                                if node in incoming_ripples.keys():  # incoming？？？
+                                if node in incoming_ripples.keys():
                                     incoming_ripples[node].append({
                                         'path': temp_path,
                                         'radius': radius - temp_length,
@@ -236,7 +216,7 @@ def main(network, in_angles, out_angles, source, destination, flighnum, pathlist
                                     }]
 
                             # Step 3.7. Inaccessible node
-                            if 0 < delta and node in inactive_node:
+                            if 0 <= delta and node in inactive_node:
                                 temp_path = path.copy()
                                 temp_path.append(node)
                                 if node in incoming_ripples.keys():
@@ -267,6 +247,7 @@ def main(network, in_angles, out_angles, source, destination, flighnum, pathlist
             length_set.append(new_ripple['length'])
             path_set.append(new_ripple['path'])
             state_set.append(new_ripple['state'])
+            activation_times[node] = int(t*v)
             omega[node] = nr
             nr += 1
 
@@ -279,7 +260,7 @@ def main(network, in_angles, out_angles, source, destination, flighnum, pathlist
                 # print("nextnode", network_point[pointcoordlist[epicenter]])
                 # print("{} neighbor".format(epicenter), neighbor[epicenter])
                 for node in neighbor[epicenter]:
-                    if omega[node] == -1:
+                    if omega[node] == -1 or node in pushback_points:
                         flag = False
                         break
                 if flag:
@@ -291,10 +272,14 @@ def main(network, in_angles, out_angles, source, destination, flighnum, pathlist
     # 将数字形式的链表，转换成point的坐标形式
     plist = helpfunction.list2node(path_set[ripple], pointcoordlist)
 
-    # Draw.create_bokeh_animation(network_point, network, pointcoordlist, t, v, path, plist)
-    # Draw.create_bokeh_animation_with_path(network_point, network, pointcoordlist, t, v, path_set[ripple], plist)
+    # Convert the path to list of activation times
+    path_activation_times = [activation_times[node] for node in path_set[ripple]]  # <<< New code here
+
+    # Draw_path.create_bokeh_animation(network_point, network, pointcoordlist, t, v, path, plist)
+    # Draw_path.create_bokeh_animation_with_path(network_point, network, pointcoordlist, t, v, path_set[ripple], plist)
     # 按顺序打印最终路径的节点信息
     # helpfunction.print_plist(plist, points = theairport.points)
     # findpath.interactive_plot_network(network_point, x, y, pointcoordlist, plist)
 
-    return path_set[ripple], length_set[ripple], plist, t, v
+    return path_set[ripple], length_set[ripple], plist, t, v, path_activation_times
+

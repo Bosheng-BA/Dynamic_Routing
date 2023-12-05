@@ -14,6 +14,8 @@ from bokeh.io import curdoc
 import time
 import datetime
 import helpfunction
+import numpy as np
+import matplotlib.pyplot as plt
 
 
 # 可视化路网寻路的过程
@@ -24,9 +26,6 @@ def create_bokeh_animation(network_point, pointcoordlist):
     # 创建一个空的 Figure 对象
     p = figure(title="Bokeh Animation", x_range=(20000, 26000), y_range=(6000, 9500), width=1200, height=600)
 
-    # path =[64, 971, 970, 969, 968, 967, 966, 965, 964, 963, 962, 961, 960, 959, 958, 957, 956, 955, 954, 953, 952, 951, 950, 949, 948, 947, 946, 945, 944, 943, 942, 941, 940, 939, 938, 937, 936, 935, 934, 933, 932, 931, 930, 929, 928, 927, 926, 925, 924, 923, 922, 921, 920, 919, 918, 917, 916, 915, 914, 913, 912, 911, 910, 909, 908, 907, 906, 905, 904, 903, 902, 901, 900, 899, 898, 897, 896, 895, 894, 893, 892, 891, 890, 889, 888, 887, 886, 885, 884, 883, 882, 881, 880, 879, 878, 877, 876, 875, 874, 873, 872, 871, 870, 835, 836, 837, 838, 834, 833, 832, 831, 802, 801, 800, 799, 798, 797, 830, 796, 793, 792, 785, 784, 829, 789, 788, 791, 790, 828, 827, 826, 825, 867, 868, 170]
-    # path = [64, 971, 970, 969, 968, 967, 966, 965, 964, 963, 962, 961, 960, 959, 958, 957, 956, 955, 954, 953, 952, 951, 950, 949, 948, 947, 946, 945, 944, 943, 942, 941, 940, 939, 938, 937, 936, 935, 934, 933, 932, 931, 930, 929, 928, 927, 926, 925, 924, 923, 922, 921, 920, 919, 918, 917, 916, 915, 914, 913, 912, 911, 910, 909, 908, 907, 906, 905, 904, 903, 902, 901, 900, 899, 898, 897, 896, 895, 894, 893, 892, 891, 890, 889, 888, 887, 886, 885, 884, 883, 882, 881, 880, 879, 878, 877, 876, 875, 874, 873, 872, 871, 870, 835, 836, 837, 838, 834, 833, 832, 831, 802, 801, 800, 799, 798, 797, 830, 796, 793, 792, 785, 784, 829, 789, 788, 791, 790, 828, 827, 826, 825, 867, 868, 869, 1005, 1008, 982, 981, 980, 979, 978, 977, 976, 975, 974, 973, 972, 1041, 1042, 1043, 1049, 1063, 1064, 1065, 1067, 1066]
-    # path = [64, 971, 970, 969, 968, 967, 966, 965, 964, 963, 962, 961, 960, 959, 958, 957, 956, 955, 954, 953, 952, 951, 950, 949, 948, 947, 946, 945, 944, 943, 942, 941, 940, 939, 938, 937, 936, 935, 934, 933, 932, 931, 930, 929, 928, 927, 926, 925, 924, 923, 922, 921, 920, 919, 918, 917, 916, 915, 914, 913, 912, 911, 910, 909, 908, 907, 906, 905, 904, 903, 902, 901, 900, 899, 898, 897, 896, 895, 894, 893, 892, 891, 890, 889, 888, 887, 886, 885, 884, 883, 882, 881, 880, 879, 878, 877, 876, 875, 874, 873, 872, 871, 870, 835, 836, 837, 838, 834, 833, 832, 831, 802, 801, 800, 799, 798, 797, 830, 796, 793, 792, 785, 784, 829, 789, 788, 791, 790, 828, 827, 826, 825, 867, 868, 869, 1005, 1008, 982, 981, 980, 979, 978, 977, 976, 975, 974, 973, 972, 1041, 1042, 1043, 1044, 1045, 1046, 1047, 1048]
     path = [64, 971, 970, 969, 968, 967, 966, 965, 964, 963, 962, 961, 960, 959, 958, 957, 956, 955, 954, 953, 1097, 1098, 1112, 1111, 1110]
     pathpoint = helpfunction.list2node(path, pointcoordlist)
 
@@ -55,6 +54,54 @@ def create_bokeh_animation(network_point, pointcoordlist):
     p.line(x=path_x, y=path_y, line_color='blue', line_width=3, legend_label="Final Path")
 
     show(p)
+
+
+def create_matplotlib_figure(network_point, pointcoordlist, path, stand, runway,flightnum):
+    # 创建保存图像的文件夹
+    save_dir = 'saved_figures_gaptraffic-2019-08-07-new'
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    # 创建一个新的figure对象
+    # fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(18, 12))
+
+    # 绘制线路
+    for point, connections in network_point.items():
+        for connected_point, _ in connections.items():
+            ax.plot([point[0], connected_point[0]], [point[1], connected_point[1]], color='gray')
+
+    # 绘制节点
+    x_coords = [coord[0] for coord in pointcoordlist]
+    y_coords = [coord[1] for coord in pointcoordlist]
+    ax.scatter(x_coords, y_coords, color='yellow', label="Nodes")
+
+    # path = [(0, 0), (100, 0), (200, 0)]
+    pathpoint = path
+
+    # 绘制最后得到的路径
+    path_x = [pathpoint[i][0] for i in range(len(pathpoint))]
+    path_y = [pathpoint[i][1] for i in range(len(pathpoint))]
+    ax.plot(path_x, path_y, color='blue', label="Final Path")
+
+    # 设置图例和标题
+    plt.legend()
+    plt.title("Matplotlib Animation")
+
+    # 使用stand和runway作为文件名的一部分
+    filename = f'flight_{flightnum}_stand_{stand}_runway_{runway}.png'
+    save_path = os.path.join(save_dir, filename)
+
+    # 保存图像
+    plt.savefig(save_path)
+    # plt.show()
+
+    # 关闭图像，以免占用过多资源
+    plt.close(fig)
+
+# network = {(0, 0): {(100, 0):100, (0, 100):100}, (100, 0): {(200, 0):200}, (0, 100): {(0, 200):100}}
+# pointcoordlist = [(0, 0), (100, 0), (200, 0), (0, 100), (0, 200)]
+# create_matplotlib_figure(network, pointcoordlist)
 
 
 # 圆形障碍物情况

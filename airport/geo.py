@@ -27,7 +27,7 @@ def angle_2p(p1, p2):
     y1 = p1[1]
     x2 = p2[0]
     y2 = p2[1]
-    return math.atan2(x2 - x1, y2 - y1)
+    return math.atan2(y2 - y1, x2 - x1)
 
 
 
