@@ -39,6 +39,7 @@ def initial_network(airport_cepo):
     lines = airport_cepo.lines
     init_lines = airport_init.lines
     points0 = airport_init.points
+    pushback_edges = []
 
     for (i, point) in enumerate(points):
         network[point.xy] = {}
@@ -82,14 +83,17 @@ def initial_network(airport_cepo):
                 out_angles[p1][p4] = geo.angle_2p(p44, p33)
                 in_angles[p4][p1] = geo.angle_2p(p44, p33)
                 out_angles[p4][p1] = geo.angle_2p(p22, p11)
+                pushback_edges.append((p1, p4))
             else:
                 in_angles[p1][p4] = geo.angle_2p(p11, p22)
                 out_angles[p1][p4] = geo.angle_2p(p33, p44)
                 in_angles[p4][p1] = geo.angle_2p(p44, p33)
                 out_angles[p4][p1] = geo.angle_2p(p22, p11)
             length = 0.0  # 注意浮点型
-            # if line.oneway:  # 处理路网单向路
-            #     weights.pop((p4, p1))
+            if line.oneway:  # 处理路网单向路
+                # print(line.oneway)
+                # time_windows[(p4, p1)] = [(0, 0)]
+                graph[p4].remove((p4, p1))
 
     for (i, runway) in enumerate(runways):
         p1 = runway.xys[0]
@@ -119,6 +123,7 @@ def initial_network(airport_cepo):
     V3 = 15
     X = 0.5
     speeds = [V1, V2, V3]  # Replace with actual values
+    speeds2 = [2.5, 5, 7.5]
     fuel_consumption_rate = X  # Replace with actual value
 
     for (i, line) in enumerate(lines):
@@ -130,10 +135,13 @@ def initial_network(airport_cepo):
         if line.speed < 0:
             speed = line.speed
             costs[(p4, p1)] = costs[(p1, p4)] = calculate_cost(length, speed, fuel_consumption_rate)
+            # costs[(p4, p1)] = costs[(p1, p4)] = [calculate_cost(length, speed, fuel_consumption_rate) for speed in speeds2]
             # calculate_cost(length, speed, fuel_consumption_rate)
         else:
             # Calculate cost for each speed
-            costs[(p4, p1)] = costs[(p1, p4)] = [calculate_cost(length, speed, fuel_consumption_rate) for speed in speeds]
+            speed = 10
+            costs[(p4, p1)] = costs[(p1, p4)] = calculate_cost(length, speed, fuel_consumption_rate)
+            # costs[(p4, p1)] = costs[(p1, p4)] = [calculate_cost(length, speed, fuel_consumption_rate) for speed in speeds]
             # costs[(p4, p1)] = [calculate_cost(length, speed, fuel_consumption_rate) for speed in speeds]
 
     # Now, `costs` dictionary contains the time and fuel costs for each segment at different speeds
@@ -157,7 +165,7 @@ def initial_network(airport_cepo):
     """********* print network **********"""
     # neighbor_info = helpfunction.turn_network(network)
     # helpfunction.print_neighbor_info(neighbor_info, points)
-    return graph, weights, time_windows, in_angles, out_angles, costs
+    return graph, weights, time_windows, in_angles, out_angles, costs, pushback_edges
 
 # network, pointcoordlist, network_cepo, in_angles, out_angles, in_angles_cepo, out_angles_cepo = initial_network(airport_cepo);
 

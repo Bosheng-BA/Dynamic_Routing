@@ -56,32 +56,38 @@ def create_bokeh_animation(network_point, pointcoordlist):
     show(p)
 
 
-def create_matplotlib_figure(network_point, pointcoordlist, path, stand, runway,flightnum):
+def create_matplotlib_figure(graph, path, stand, runway, flightnum):
     # 创建保存图像的文件夹
-    save_dir = 'saved_figures_gaptraffic-2019-08-07-new'
+    # save_dir = 'new_QPPTW_saved_figures_2019-08-07-new-考虑修改时间窗'
+    save_dir = 'TEST'
+    # path = [(22622.1,8509.6), (22622.7,8502.7), (22624.5,8495.9), (22627.5,8489.6), (22631.5,8483.9), (22636.4,8479.0), (22642.1,8475.0), (22648.4,8472.0), (22655.2,8470.2), (22662.1,8469.6)]
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
 
     # 创建一个新的figure对象
-    # fig, ax = plt.subplots()
     fig, ax = plt.subplots(figsize=(18, 12))
 
     # 绘制线路
-    for point, connections in network_point.items():
-        for connected_point, _ in connections.items():
-            ax.plot([point[0], connected_point[0]], [point[1], connected_point[1]], color='gray')
+    for node, connections in graph.items():
+        for connection in connections:
+            # print(connection[-1])
+            point1 = node
+            point2 = connection[-1]
+            ax.plot([point1[0], point2[0]], [point1[1], point2[1]], color='gray')
 
     # 绘制节点
-    x_coords = [coord[0] for coord in pointcoordlist]
-    y_coords = [coord[1] for coord in pointcoordlist]
-    ax.scatter(x_coords, y_coords, color='yellow', label="Nodes")
+    for node in graph.keys():
+        ax.scatter(node[0], node[1], color='yellow')
+
+    # Draw the source point and the target point
+    ax.scatter(path[0][0], path[0][1], color='red')
+    ax.scatter(path[-1][0], path[-1][1], color='green')
 
     # path = [(0, 0), (100, 0), (200, 0)]
-    pathpoint = path
-
     # 绘制最后得到的路径
-    path_x = [pathpoint[i][0] for i in range(len(pathpoint))]
-    path_y = [pathpoint[i][1] for i in range(len(pathpoint))]
+    path_x = [point[0] for point in path]
+    path_y = [point[1] for point in path]
+    # print(path_y)
     ax.plot(path_x, path_y, color='blue', label="Final Path")
 
     # 设置图例和标题
