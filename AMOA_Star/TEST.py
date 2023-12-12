@@ -64,7 +64,13 @@ def is_dominated(c, c_prime):
     # Check if all elements in c are less than or equal to corresponding elements in c_prime
     # and c is not equal to c_prime
     dominated = False
+    if isinstance(c, set):
+        # 将集合中的所有非 None 子集合扁平化为一个列表
+        # print('ccccc')
+        c = [item for sublist in c if sublist is not None for item in sublist]
+
     if c and c_prime:
+        # print("c", c, "C_prime", c_prime)
         if all(c_j <= c_prime_j for c_j, c_prime_j in zip(c, c_prime)) and c != c_prime:
             dominated = True
     # else:
@@ -191,8 +197,9 @@ def AMOA_star(start, end, costs, graph, time_windows, start_time, out_angles, in
             print("n == end")
             COSTS.add(g_n)
             OPEN = [alt for alt in OPEN if not is_dominated(g_n, alt[2])]
-            path = reconstruct_paths(SG, end, start)
-            return path, COSTS
+            if not OPEN:
+                path = reconstruct_paths(SG, end, start)
+                return path, COSTS
         else:
             for segment in graph[n]:
                 # print(segment)
@@ -227,9 +234,8 @@ def AMOA_star(start, end, costs, graph, time_windows, start_time, out_angles, in
                             expand(n, m, g_n, f_n, SG, G_op, G_cl, OPEN, COSTS, end, costs, graph, time_windows,
                                    start_time, C_n_m, c_n_m_l, segment)
 
-    # path = reconstruct_paths(SG, end, start)
-    # return path, COSTS
-    path = None
+    path = reconstruct_paths(SG, n, start)
+    # path = None
     COSTS = None
     return path, COSTS
 
@@ -245,7 +251,7 @@ def expand(n, m, g_n, f_n, SG, G_op, G_cl, OPEN, COSTS, end, costs, graph, time_
     # for c_n_m_l in C_n_m:
     #     # print(C_n_m)
     #     # print("hhhhh", c_n_m_l)
-    #     加入角度，单行道（），Pushback
+    #     加入角度（），单行道（），Pushback（）
     check, holding_enabled, holding_cost = check_time_windows(segment, time_windows, c_n_m_l, G_op, G_cl,
                                                               start_time)
     # check = True
@@ -264,7 +270,7 @@ def expand(n, m, g_n, f_n, SG, G_op, G_cl, OPEN, COSTS, end, costs, graph, time_
         # print("f_m:", f_m)
         # print("m not in SG")
         # if not is_dominated(f_m, COSTS):
-        # print("COSTS:", COSTS)
+        # print("COSTS:", COSTS, f_m)
         if not is_dominated(COSTS, f_m):
             # print('f_m is not dominated by COSTS')
             OPEN.append((m, g_m, f_m))

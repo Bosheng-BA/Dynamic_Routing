@@ -149,17 +149,17 @@ if __name__ == "__main__":
                 if edge in pushback_edges:
                     check = True
 
-        if check:  # When the stand have two ways to pushback, we need choose the smallest COST
-            for edge in graph[source]:
-                graph_copy[source].remove(edge)
-                # print(graph_copy)
-                path, COST = TEST.AMOA_star(source, target, costs, graph, time_windows, start_time, out_angles,
-                                            in_angles, Stand)
+            if check:  # When the stand have two ways to pushback, we need choose the smallest COST
+                for edge in graph[source]:
+                    graph_copy[source].remove(edge)
+                    # print(graph_copy)
+                    path, COST = TEST.AMOA_star(source, target, costs, graph, time_windows, start_time, out_angles,
+                                                in_angles, Stand)
 
-                graph_copy[source].append(edge)
+                    graph_copy[source].append(edge)
 
-                COST_list.append(COST)
-                paths.append(path)
+                    COST_list.append(COST)
+                    paths.append(path)
 
             if COST_list:
                 # 将 COST_list 中的所有集合扁平化为一个包含所有成本向量的列表
