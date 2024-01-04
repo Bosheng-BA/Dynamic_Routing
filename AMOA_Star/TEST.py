@@ -1,5 +1,5 @@
 import math
-
+import QPPTW
 
 def read_cost_vector(n, m, costs):
     # This should read the cost vector from the database or data structure
@@ -133,7 +133,7 @@ def eliminate_dominated(g_m, G_op_m, G_cl_m, OPEN):
     return G_op_m, G_cl_m, OPEN
 
 
-def heuristic_function(current_position, target_position):
+def heuristic_function(current_position, target_position, graph, weights, time_windows,start_time, in_angles, out_angles, Stand):
     """
     Calculate a heuristic estimate from the current position to the target position.
 
@@ -147,9 +147,14 @@ def heuristic_function(current_position, target_position):
     min_fuel_rate = 0.5
     # Calculate straight line distance
     distance = (target_position[0] - current_position[0]) + (target_position[1] - current_position[1])
-
+    source = current_position
+    target = target_position
+    graph_copy = graph
+    path, path, new_time_windows, time_cost = QPPTW.QPPTW_algorithm(graph_copy, weights, time_windows, source, target,
+                                                                    start_time, in_angles, out_angles, Stand)
     # Time estimate based on maximum speed
-    time_estimate = distance / max_speed
+    # time_estimate = distance / max_speed
+    time_estimate = time_cost
 
     # Fuel estimate based on minimum fuel rate and time estimate
     fuel_estimate = time_estimate * min_fuel_rate
@@ -164,7 +169,7 @@ def heuristic_function(current_position, target_position):
 # min_fuel_rate = X  # Minimum fuel consumption rate (replace X with actual value)
 
 
-def AMOA_star(start, end, costs, graph, time_windows, start_time, out_angles, in_angles, Stand):
+def AMOA_star(start, end, costs, graph, time_windows, start_time, out_angles, in_angles, Stand, weights):
     SG = {}  # Acyclic search graph
     G_op = {start: {(0, 0)}}
     G_cl = {start: set()}
@@ -227,12 +232,12 @@ def AMOA_star(start, end, costs, graph, time_windows, start_time, out_angles, in
                         for c_n_m_l in C_n_m:
                             n, m, g_n, f_n, SG, G_op, G_cl, OPEN, COSTS, end, costs, graph, time_windows, start_time, C_n_m, c_n_m_l, segment = \
                                 expand(n, m, g_n, f_n, SG, G_op, G_cl, OPEN, COSTS, end, costs, graph, time_windows,
-                                       start_time, C_n_m, c_n_m_l, segment)
+                                       start_time, C_n_m, c_n_m_l, segment, weights,  in_angles, out_angles, Stand)
                     else:  # Turn segment
                         c_n_m_l = C_n_m
                         n, m, g_n, f_n, SG, G_op, G_cl, OPEN, COSTS, end, costs, graph, time_windows, start_time, C_n_m, c_n_m_l, segment = \
                             expand(n, m, g_n, f_n, SG, G_op, G_cl, OPEN, COSTS, end, costs, graph, time_windows,
-                                   start_time, C_n_m, c_n_m_l, segment)
+                                   start_time, C_n_m, c_n_m_l, segment, weights,  in_angles, out_angles, Stand)
 
     path = reconstruct_paths(SG, n, start)
     # path = None
@@ -240,7 +245,7 @@ def AMOA_star(start, end, costs, graph, time_windows, start_time, out_angles, in
     return path, COSTS
 
 
-def expand(n, m, g_n, f_n, SG, G_op, G_cl, OPEN, COSTS, end, costs, graph, time_windows, start_time, C_n_m, c_n_m_l, segment):
+def expand(n, m, g_n, f_n, SG, G_op, G_cl, OPEN, COSTS, end, costs, graph, time_windows, start_time, C_n_m, c_n_m_l, segment, weights,  in_angles, out_angles, Stand):
     # for segment in graph[n]:
     #     # print(segment)
     #     m = segment[1]  # Assuming segment identifies the end node
@@ -266,7 +271,7 @@ def expand(n, m, g_n, f_n, SG, G_op, G_cl, OPEN, COSTS, end, costs, graph, time_
 
     g_m = tuple(sum(x) for x in zip(g_n, c_n_m_l))
     if m not in SG:
-        f_m = tuple(sum(x) for x in zip(g_m, heuristic_function(m, end)))
+        f_m = tuple(sum(x) for x in zip(g_m, heuristic_function(m, end, graph, weights, time_windows,start_time, in_angles, out_angles, Stand)))
         # print("f_m:", f_m)
         # print("m not in SG")
         # if not is_dominated(f_m, COSTS):
@@ -285,7 +290,10 @@ def expand(n, m, g_n, f_n, SG, G_op, G_cl, OPEN, COSTS, end, costs, graph, time_
             # print('not any(is_dominated(g_m, other) for other in G_op.get(m, set()).union(G_cl.get(m, set())))')
             # eliminate_dominated(g_m, G_op.get(m, set()).union(G_cl.get(m, set())))
             G_op, G_cl, OPEN = eliminate_dominated(g_m, G_op, G_cl, OPEN)
-            f_m = tuple(sum(x) for x in zip(g_m, heuristic_function(m, end)))
+            # f_m = tuple(sum(x) for x in zip(g_m, heuristic_function(m, end)))
+            f_m = tuple(sum(x) for x in zip(g_m, heuristic_function(m, end, graph, weights, time_windows, start_time,
+                                                                    in_angles, out_angles, Stand)))
+
             if not is_dominated(COSTS, f_m):
                 # print('f_m is not dominated by COSTS')
                 OPEN.append((m, g_m, f_m))

@@ -129,6 +129,7 @@ if __name__ == "__main__":
         else:
             start_time = flight.aldt
 
+        # start_time = 100
         # 这里是选择确定飞机的起飞与终点
         source, target = Sour_and_Des.find_the_sour_des(stands=stand_dict, pists=runway_dict, flight=flight)
 
@@ -154,7 +155,7 @@ if __name__ == "__main__":
                     graph_copy[source].remove(edge)
                     # print(graph_copy)
                     path, COST = TEST.AMOA_star(source, target, costs, graph, time_windows, start_time, out_angles,
-                                                in_angles, Stand)
+                                                in_angles, Stand, weights)
 
                     graph_copy[source].append(edge)
 
@@ -178,14 +179,14 @@ if __name__ == "__main__":
                     path = None
         else:  # the normal condition
             path, COST = TEST.AMOA_star(source, target, costs, graph, time_windows, start_time, out_angles, in_angles,
-                                        Stand)
+                                        Stand, weights)
 
         # path, COST = TEST.AMOA_star(source, target, costs, graph, time_windows, start_time, out_angles, in_angles,
         # Stand)
         print("fligt:", flightnum, "Path:", path)
         print("Cost:", COST)
-        # if path:
-        #     Draw_path.create_matplotlib_figure(graph, path, name1, name2, flightnum)
+        if path:
+            Draw_path.create_matplotlib_figure(graph, path, name1, name2, flightnum)
 
     # route, route_coord, route_activation_times = quickest_path_with_time_windows(graph, weights, time_windows,
     # source, target, start_time)
